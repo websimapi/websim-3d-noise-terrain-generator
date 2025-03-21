@@ -7,10 +7,12 @@ export class TerrainGenerator {
         this.noise = createNoise3D();
         this.chunks = new Map(); // Store chunks using a map with string keys
         this.meshes = new Map(); // Store the corresponding meshes
+        this.seed = Math.random(); // Save a consistent seed for noise generation
     }
     
     regenerateNoise() {
         // Create a new noise function with a random seed
+        this.seed = Math.random();
         this.noise = createNoise3D();
         // Clear existing chunks to force regeneration
         this.chunks.clear();
@@ -18,6 +20,10 @@ export class TerrainGenerator {
     
     // Get noise value at a specific point
     getNoise(x, y, z) {
+        // Add seed to coordinates to change terrain with each regeneration
+        x += this.seed * 100;
+        z += this.seed * 100;
+        
         let amplitude = config.amplitude;
         let frequency = config.noiseScale;
         let noiseHeight = 0;
@@ -88,7 +94,9 @@ export class TerrainGenerator {
         for (let i = 0; i < vertices.length / 3; i++) {
             const x = i % size;
             const z = Math.floor(i / size);
-            vertices[i * 3 + 1] = chunkData[x + z * size] * config.amplitude;
+            if (x < size && z < size) {
+                vertices[i * 3 + 1] = chunkData[x + z * size] * config.amplitude;
+            }
         }
         
         // Update normals for proper lighting
@@ -123,12 +131,12 @@ export class TerrainGenerator {
         // Add colors to geometry
         geometry.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
         
-        // Create mesh and position it
+        // Create mesh and position it correctly
         const mesh = new THREE.Mesh(geometry, material);
         mesh.position.set(
-            chunkX * size - (config.viewDistance * size) / 2,
+            chunkX * size,
             0,
-            chunkZ * size - (config.viewDistance * size) / 2
+            chunkZ * size
         );
         
         this.meshes.set(chunkKey, mesh);
@@ -145,9 +153,19 @@ export class TerrainGenerator {
         
         // Generate new chunks
         const distance = config.viewDistance;
+        const totalSize = config.chunkSize * (distance * 2 + 1);
+        
+        // Center point for the entire terrain
+        const centerOffsetX = ((distance * 2 + 1) * config.chunkSize) / 2;
+        const centerOffsetZ = ((distance * 2 + 1) * config.chunkSize) / 2;
+        
+        // Generate chunks around the center
         for (let x = -distance; x <= distance; x++) {
             for (let z = -distance; z <= distance; z++) {
                 const mesh = this.createChunkMesh(x, z);
+                // Adjust position to center the entire terrain
+                mesh.position.x -= centerOffsetX - config.chunkSize / 2;
+                mesh.position.z -= centerOffsetZ - config.chunkSize / 2;
                 scene.add(mesh);
             }
         }
@@ -160,4 +178,3 @@ export class TerrainGenerator {
         config.octaves = octaves;
     }
 }
-
