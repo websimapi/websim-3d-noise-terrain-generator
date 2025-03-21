@@ -18,6 +18,8 @@ export class TerrainGenerator {
     
     // Get noise value at a specific point
     getNoise(x, y, z) {
+        // Instead of using local x,z coordinates, always use world coordinates
+        // This ensures the noise function returns the same value for the same world position
         let amplitude = config.amplitude;
         let frequency = config.noiseScale;
         let noiseHeight = 0;
@@ -83,13 +85,21 @@ export class TerrainGenerator {
         // Rotate the plane to be horizontal
         geometry.rotateX(-Math.PI / 2);
         
-        // Update vertices based on height data
+        // Get exact world position for each vertex to ensure seamless joining
         const vertices = geometry.attributes.position.array;
         for (let i = 0; i < vertices.length / 3; i++) {
-            const x = i % size;
-            const z = Math.floor(i / size);
-            if (x < size && z < size) {
-                vertices[i * 3 + 1] = chunkData[x + z * size] * config.amplitude;
+            // Get the correct local position for this vertex
+            const localX = i % size;
+            const localZ = Math.floor(i / size);
+            
+            // Apply height only if the vertex is part of the grid (not just from the geometry)
+            if (localX < size && localZ < size) {
+                // The height comes from the exact world position
+                const worldX = localX + chunkX * size;
+                const worldZ = localZ + chunkZ * size;
+                
+                // Get the height directly from our noise function to ensure consistency
+                vertices[i * 3 + 1] = this.getNoise(worldX, 0, worldZ) * config.amplitude;
             }
         }
         
