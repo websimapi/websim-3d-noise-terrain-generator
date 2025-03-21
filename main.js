@@ -106,6 +106,14 @@ class TerrainApp {
     }
     
     generateTerrain() {
+        // Clear existing terrain meshes from the scene
+        this.scene.children = this.scene.children.filter(child => {
+            if (child.isTerrainChunk) {
+                return false; // Remove terrain chunks
+            }
+            return true; // Keep other objects (lights, etc.)
+        });
+        
         this.terrainGenerator.generateTerrain(this.scene);
     }
     
@@ -124,4 +132,3 @@ class TerrainApp {
 document.addEventListener('DOMContentLoaded', () => {
     new TerrainApp();
 });
-
